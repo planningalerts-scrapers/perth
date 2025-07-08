@@ -1,11 +1,11 @@
 require 'scraperwiki'
-require "mechanize"
+require 'mechanize'
 
-require "tempfile"
+require 'tempfile'
 
 # Make a pdftoxml method just like in Python
 module PdfHelper
-  def self.pdftoxml(data, options = "")
+  def self.pdftoxml(data, options = '')
     # Write data to a temporary file (with a pdf extension)
     src = Tempfile.new(['pdftohtml_src.', '.pdf'])
     dst = Tempfile.new(['pdftohtml_dst.', '.xml'])
@@ -37,8 +37,8 @@ module PdfHelper
     texts.each do |t|
       # See if there is any overlap between the current bit of text and any of the
       # preexisting columns
-      left = t["left"].to_i
-      right = t["left"].to_i + t["width"].to_i
+      left = t['left'].to_i
+      right = t['left'].to_i + t['width'].to_i
       i = find_column_no(columns, left, right)
       if i
         puts "#{t.inner_text} is in column #{i}"
@@ -50,20 +50,22 @@ module PdfHelper
       end
     end
     # And make sure the results are in order
-    columns.sort{|a,b| a[0] <=> b[0]}
+    columns.sort { |a, b| a[0] <=> b[0] }
   end
 
   def self.extract_indices_from_pdf_text(texts, columns = nil)
-    columns = extract_columns_from_pdf_text(texts) if columns.nil? 
-    top, left, width = nil, nil, nil
-    x, y = 0, 0
-    texts = texts.map do |t|
-      left = t["left"].to_i
-      right = left + t["width"].to_i
+    columns = extract_columns_from_pdf_text(texts) if columns.nil?
+    _ = nil
+    left = nil
+    x = 0
+    y = 0
+    texts.map do |t|
+      left = t['left'].to_i
+      right = left + t['width'].to_i
       new_x = find_column_no(columns, left, right)
       # If we're back at the beginning of a row this is a new row
       y += 1 if new_x == 0 && x > 0
-      x = new_x unless new_x.nil? 
+      x = new_x unless new_x.nil?
       [x, y, t.inner_text]
     end
   end
@@ -79,10 +81,10 @@ module PdfHelper
       max_y = [max_y, t[1]].max
     end
     # Create an empty 2d array
-    result = Array.new(max_y + 1) { |i| Array.new(max_x + 1) }
+    result = Array.new(max_y + 1) { |_i| Array.new(max_x + 1) }
     texts.each do |t|
       x, y, text = t
-      if result[y][x].nil? 
+      if result[y][x].nil?
         result[y][x] = text
       else
         result[y][x] += "\n" + text
@@ -92,16 +94,14 @@ module PdfHelper
   end
 end
 
-
-
-info_url = "http://www.perth.wa.gov.au/planning-development/planning-and-building-tools/building-and-development-applications-received"
+info_url = 'http://www.perth.wa.gov.au/planning-development/planning-and-building-tools/building-and-development-applications-received'
 
 def clean_whitespace(a)
-  a.gsub("\n", " ").squeeze(" ").strip
+  a.gsub("\n", ' ').squeeze(' ').strip
 end
 
 def extract_applications_from_pdf(content, info_url)
-  info_url = "http://www.perth.wa.gov.au/planning-development/planning-and-building-tools/building-and-development-applications-received"
+  info_url = 'http://www.perth.wa.gov.au/planning-development/planning-and-building-tools/building-and-development-applications-received'
 
   doc = Nokogiri::XML(PdfHelper.pdftoxml(content))
   doc.search('page').each do |p|
@@ -111,13 +111,13 @@ def extract_applications_from_pdf(content, info_url)
 
     PdfHelper.extract_table_from_pdf_text(p.search('text[font="2"]'), columns).each do |row|
       record = {
-        "date_received" => Date.strptime(row[0].split(" ")[0], "%d/%m/%Y").to_s,
-        "address" => clean_whitespace(row[0].split(" ")[1..-1].join(" ")),
-        "description" => clean_whitespace(row[1]),
-        "council_reference" => row[4].strip,
-        "date_scraped" => Date.today.to_s,
-        "info_url" => info_url,
-        "comment_url" => info_url,
+        'date_received' => Date.strptime(row[0].split(' ')[0], '%d/%m/%Y').to_s,
+        'address' => clean_whitespace(row[0].split(' ')[1..-1].join(' ')),
+        'description' => clean_whitespace(row[1]),
+        'council_reference' => row[4].strip,
+        'date_scraped' => Date.today.to_s,
+        'info_url' => info_url,
+        'comment_url' => info_url
       }
 
       ScraperWiki.save_sqlite(['council_reference'], record)
@@ -128,7 +128,7 @@ end
 agent = Mechanize.new
 page = agent.get(info_url)
 # Only get the 4 most recent week's applications
-page.search("a").find_all{|a| a.inner_text =~ /Report/}[0..3].each do |a|
-  page = agent.get(a["href"])
+page.search('a').find_all { |a| a.inner_text =~ /Report/ }[0..3].each do |a|
+  page = agent.get(a['href'])
   extract_applications_from_pdf(page.content, info_url)
 end
